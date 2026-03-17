@@ -1,15 +1,22 @@
 {
-  "name": "claude-express",
-  "version": "1.0.0",
-  "main": "src/index.js",
+  "name": "audio-transcription-service",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2"
+    "build": "pnpm -r build",
+    "migrate": "prisma migrate deploy",
+    "migrate:dev": "prisma migrate dev",
+    "generate": "prisma generate",
+    "dev:server": "dotenv -e .env.local -- pnpm --filter @app/server run dev",
+    "dev:worker": "dotenv -e .env.local -- pnpm --filter @app/worker run dev"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "dotenv-cli": "^11.0.0",
+    "prisma": "^5.22.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "@prisma/client": "5.22.0"
   }
 }

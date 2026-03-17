@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>音訊轉錄與摘要</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
+    h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
+    .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
+    label { display: block; margin-bottom: .5rem; font-weight: 600; }
+    input[type=file] { margin-bottom: 1rem; }
+    button { background: #2563eb; color: white; border: none; padding: .6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 1rem; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .status { margin-top: 1rem; }
+    .badge { display: inline-block; padding: .2rem .6rem; border-radius: 4px; font-size: .85rem; font-weight: 600; }
+    .PENDING    { background: #e5e7eb; color: #374151; }
+    .PROCESSING { background: #fef3c7; color: #92400e; }
+    .COMPLETED  { background: #d1fae5; color: #065f46; }
+    .FAILED     { background: #fee2e2; color: #991b1b; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 1rem; border-radius: 6px; font-size: .9rem; margin-top: .5rem; }
+    .section-title { font-weight: 600; margin-bottom: .4rem; color: #555; }
+    #jobList { list-style: none; }
+    #jobList li { padding: .5rem; border-bottom: 1px solid #eee; cursor: pointer; }
+    #jobList li:hover { background: #f0f7ff; }
+    .error-msg { color: #dc2626; margin-top: .5rem; font-size: .9rem; }
+  </style>
+</head>
+<body>
+  <h1>音訊轉錄與摘要服務</h1>
+
+  <div class="card">
+    <label for="audioFile">上傳音訊檔案（.mp3 / .wav）</label>
+    <input type="file" id="audioFile" accept=".mp3,.wav,.ogg,.m4a" />
+    <button id="uploadBtn">上傳並開始處理</button>
+    <div id="uploadError" class="error-msg"></div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <div class="status">
+      狀態：<span id="statusBadge" class="badge">-</span>
+      <span id="jobIdDisplay" style="margin-left:1rem;font-size:.85rem;color:#888;"></span>
+    </div>
+    <div id="transcriptSection" style="display:none;margin-top:1rem">
+      <div class="section-title">逐字稿</div>
+      <pre id="transcriptText"></pre>
+    </div>
+    <div id="summarySection" style="display:none;margin-top:1rem">
+      <div class="section-title">摘要</div>
+      <pre id="summaryText"></pre>
+    </div>
+    <div id="errorSection" style="display:none;margin-top:1rem">
+      <div class="section-title">錯誤訊息</div>
+      <pre id="errorText" style="color:#dc2626;"></pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
+      <strong>歷史任務</strong>
+      <button id="refreshBtn" style="font-size:.85rem;padding:.3rem .8rem">重新整理</button>
+    </div>
+    <ul id="jobList"><li style="color:#888">載入中...</li></ul>
+  </div>
+
+  <script>
+    const uploadBtn = document.getElementById('uploadBtn');
+    const audioFile = document.getElementById('audioFile');
+    const uploadError = document.getElementById('uploadError');
+    const resultCard = document.getElementById('resultCard');
+    const statusBadge = document.getElementById('statusBadge');
+    const jobIdDisplay = document.getElementById('jobIdDisplay');
+    const transcriptSection = document.getElementById('transcriptSection');
+    const transcriptText = document.getElementById('transcriptText');
+    const summarySection = document.getElementById('summarySection');
+    const summaryText = document.getElementById('summaryText');
+    const errorSection = document.getElementById('errorSection');
+    const errorText = document.getElementById('errorText');
+    const jobList = document.getElementById('jobList');
+
+    let currentEventSource = null;
+
+    function renderJob(job) {
+      resultCard.style.display = 'block';
+      statusBadge.textContent = job.status;
+      statusBadge.className = `badge ${job.status}`;
+      jobIdDisplay.textContent = job.id;
+
+      transcriptSection.style.display = job.transcript ? 'block' : 'none';
+      if (job.transcript) transcriptText.textContent = job.transcript;
+
+      summarySection.style.display = job.summary ? 'block' : 'none';
+      if (job.summary) summaryText.textContent = job.summary;
+
+      errorSection.style.display = job.errorMessage ? 'block' : 'none';
+      if (job.errorMessage) errorText.textContent = job.errorMessage;
+    }
+
+    function startSSE(jobId) {
+      if (currentEventSource) currentEventSource.close();
+      currentEventSource = new EventSource(`/api/jobs/${jobId}/events`);
+      currentEventSource.onmessage = (e) => {
+        const job = JSON.parse(e.data);
+        renderJob(job);
+        if (job.status === 'COMPLETED' || job.status === 'FAILED') {
+          currentEventSource.close();
+          loadJobs();
+        }
+      };
+      currentEventSource.onerror = () => currentEventSource.close();
+    }
+
+    uploadBtn.addEventListener('click', async () => {
+      const file = audioFile.files[0];
+      if (!file) { uploadError.textContent = '請選擇檔案'; return; }
+      uploadError.textContent = '';
+      uploadBtn.disabled = true;
+
+      const form = new FormData();
+      form.append('audio', file);
+
+      try {
+        const res = await fetch('/api/jobs', { method: 'POST', body: form });
+        const json = await res.json();
+        if (!res.ok) { uploadError.textContent = json.error?.message ?? '上傳失敗'; return; }
+        startSSE(json.data.jobId);
+        renderJob({ id: json.data.jobId, status: json.data.status });
+        loadJobs();
+      } catch (e) {
+        uploadError.textContent = '網路錯誤';
+      } finally {
+        uploadBtn.disabled = false;
+      }
+    });
+
+    async function loadJobs() {
+      try {
+        const res = await fetch('/api/jobs?limit=20');
+        const json = await res.json();
+        if (!json.success) return;
+        jobList.innerHTML = json.data.items.length === 0
+          ? '<li style="color:#888">尚無任務</li>'
+          : json.data.items.map(j =>
+              `<li onclick="viewJob('${j.id}')">
+                <span class="badge ${j.status}">${j.status}</span>
+                &nbsp;${j.originalName}
+                <small style="color:#888;margin-left:.5rem">${new Date(j.createdAt).toLocaleString()}</small>
+              </li>`
+            ).join('');
+      } catch {}
+    }
+
+    async function viewJob(id) {
+      const res = await fetch(`/api/jobs/${id}`);
+      const json = await res.json();
+      if (json.success) {
+        renderJob(json.data);
+        if (json.data.status === 'PENDING' || json.data.status === 'PROCESSING') {
+          startSSE(id);
+        }
+      }
+    }
+
+    document.getElementById('refreshBtn').addEventListener('click', loadJobs);
+
+    loadJobs();
+  </script>
+</body>
+</html>

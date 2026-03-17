@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/daniel/practices/claude log --oneline -5)",
+      "Bash(git -C /Users/daniel/practices/claude status)",
+      "Bash(git -C /Users/daniel/practices/claude show HEAD --stat)",
+      "Bash(git -C /Users/daniel/practices/claude show HEAD:CLAUDE.md)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git commit:*)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm ls:*)",
+      "WebFetch(domain:www.prisma.io)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm generate:*)"
+    ]
+  }
+}

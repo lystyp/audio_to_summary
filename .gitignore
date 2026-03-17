@@ -1,2 +1,8 @@
 node_modules/
+dist/
 .env
+.env.local
+uploads/
+*.log
+.pnpm-store/
+packages/shared/src/generated/
