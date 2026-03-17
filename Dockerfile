@@ -23,8 +23,8 @@ RUN pnpm --filter @daniel/shared build
 
 COPY apps/server ./apps/server
 COPY apps/worker ./apps/worker
-RUN pnpm --filter @app/server build
-RUN pnpm --filter @app/worker build
+RUN pnpm --filter @daniel/server build
+RUN pnpm --filter @daniel/worker build
 
 # ----
 

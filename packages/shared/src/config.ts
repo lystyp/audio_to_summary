@@ -8,7 +8,7 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string(),
   WHISPER_MODEL: z.string().default('whisper-1'),
   OPENAI_CHAT_MODEL: z.string().default('gpt-4o-mini'),
-  UPLOAD_DIR: z.string().default('/app/uploads'),
+  GCS_BUCKET: z.string(),
   MAX_FILE_SIZE_MB: z.coerce.number().default(100),
 });
 

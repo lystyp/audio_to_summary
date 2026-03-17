@@ -5,18 +5,14 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "pnpm -r build",
-    "migrate": "prisma migrate deploy",
-    "migrate:dev": "prisma migrate dev",
+    "migrate:local": "dotenv -e .env.local -- pnpm --filter @daniel/shared run migrate:local",
+    "migrate:prd": "dotenv -e .env.prod -- pnpm --filter @daniel/shared run migrate:prd",
     "generate": "prisma generate",
-    "dev:server": "dotenv -e .env.local -- pnpm --filter @app/server run dev",
-    "dev:worker": "dotenv -e .env.local -- pnpm --filter @app/worker run dev"
+    "dev:server": "dotenv -e .env.local -- pnpm --filter @daniel/server run dev",
+    "dev:worker": "dotenv -e .env.local -- pnpm --filter @daniel/worker run dev"
   },
   "devDependencies": {
     "dotenv-cli": "^11.0.0",
-    "prisma": "^5.22.0",
     "typescript": "^5.7.2"
-  },
-  "dependencies": {
-    "@prisma/client": "5.22.0"
   }
 }

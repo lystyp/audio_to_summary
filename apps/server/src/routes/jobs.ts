@@ -1,10 +1,9 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import path from 'path';
 import { prisma, publishJob } from '@daniel/shared';
 import { upload } from '../middleware/upload.js';
 import { register, unregister } from '../sse.js';
 
-export const jobsRouter = Router();
+export const jobsRouter:Router = Router();
 
 /**
  * @swagger
@@ -44,8 +43,7 @@ export const jobsRouter = Router();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-jobsRouter.post(
-  '/',
+jobsRouter.post('/',
   upload.single('audio'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -57,7 +55,7 @@ jobsRouter.post(
       const job = await prisma.job.create({
         data: {
           originalName: req.file.originalname,
-          storagePath: path.join(req.file.destination, req.file.filename),
+          storagePath: req.file.path,
         },
       });
 
