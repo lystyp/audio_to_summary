@@ -15,12 +15,12 @@ export const requestDetails = (req: Request, res: Response, next: NextFunction) 
     reqDetails.body = req.body;
   }
 
-  console.log('[Audil server : Request]', JSON.stringify(reqDetails, null, 2));
+  console.log('[Audio server : Request]', JSON.stringify(reqDetails, null, 2));
 
   // 攔截 res.json 以取得 response body
   const originalJson = res.json.bind(res);
   res.json = (body: unknown) => {
-    console.log('[Audil server : Response]', JSON.stringify({
+    console.log('[Audio server : Response]', JSON.stringify({
       status: res.statusCode,
       body,
     }, null, 2));

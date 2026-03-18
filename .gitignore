@@ -1,7 +1,8 @@
 node_modules/
+secrets/
 dist/
 .env
-.env.local
+.env
 uploads/
 *.log
 .pnpm-store/

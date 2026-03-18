@@ -1,0 +1,12 @@
+services:
+  api:
+    volumes:
+      - ./secrets/gcp-key.json:/secrets/gcp-key.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/gcp-key.json
+
+  worker:
+    volumes:
+      - ./secrets/gcp-key.json:/secrets/gcp-key.json:ro
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/gcp-key.json

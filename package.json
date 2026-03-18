@@ -5,11 +5,11 @@
   "packageManager": "pnpm@9.15.0",
   "scripts": {
     "build": "pnpm -r build",
-    "migrate:local": "dotenv -e .env.local -- prisma migrate dev -- prisma generate",
+    "migrate:local": "dotenv -e .env -- prisma migrate dev -- prisma generate",
     "migrate:prd": "dotenv -e .env.prod -- prisma migrate deploy",
-    "dbgui:local": "dotenv -e .env.local -- prisma studio",
-    "dev:server": "dotenv -e .env.local -- pnpm --filter @daniel/server run dev",
-    "dev:worker": "dotenv -e .env.local -- pnpm --filter @daniel/worker run dev"
+    "dbgui:local": "dotenv -e .env -- prisma studio",
+    "dev:server": "dotenv -e .env -- pnpm --filter @daniel/server run dev",
+    "dev:worker": "dotenv -e .env -- pnpm --filter @daniel/worker run dev"
   },
   "devDependencies": {
     "dotenv-cli": "^11.0.0",

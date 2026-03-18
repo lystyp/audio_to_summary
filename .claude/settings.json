@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /Users/daniel/practices/claude -type f -name Dockerfile* -o -name docker-compose* -o -name .dockerignore)",
+      "Bash(find /Users/daniel/practices/claude -type f -not -path */node_modules/* -not -path */.git/* -not -path */.next/* -not -path */dist/*)",
+      "Bash(find /Users/daniel/practices/claude -type f \\\\\\(-name .github -o -name *.yml -o -name *.yaml -o -name .gitlab-ci.yml -o -name Jenkinsfile \\\\\\))",
+      "Bash(git remote:*)",
+      "Bash(git push:*)",
+      "Bash(grep -r \"GCS\\\\|GEMINI\\\\|SPEECH\" /Users/daniel/practices/claude --include=*.md --include=*.env*)"
+    ]
+  }
+}

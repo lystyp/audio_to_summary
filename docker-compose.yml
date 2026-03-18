@@ -11,7 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-transcriptions}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -30,23 +30,34 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    build:
+      context: .
+      target: migrator
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-transcriptions}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     build: .
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "80:3000"
+      - "443:3000"
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-transcriptions}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-    volumes:
-      - uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-c", "npx prisma migrate deploy && node apps/server/dist/index.js"]
+      migrate:
+        condition: service_completed_successfully
 
   worker:
     build: .
@@ -56,15 +67,14 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-secret}@postgres:5432/${POSTGRES_DB:-transcriptions}
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-    volumes:
-      - uploads:/app/uploads
     depends_on:
       postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
   rabbitmq_data:
-  uploads:
