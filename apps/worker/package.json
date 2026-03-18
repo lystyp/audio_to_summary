@@ -11,9 +11,11 @@
   "dependencies": {
     "@daniel/shared": "workspace:*",
     "@google-cloud/speech": "^7.3.0",
-    "@google/generative-ai": "^0.24.1"
+    "@google/generative-ai": "^0.24.1",
+    "fluent-ffmpeg": "^2.1.3"
   },
   "devDependencies": {
+    "@types/fluent-ffmpeg": "^2.1.28",
     "@types/node": "^22.10.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

@@ -1,6 +1,6 @@
 FROM node:20-alpine AS base
 WORKDIR /app
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl ffmpeg
 RUN npm install -g pnpm
 
 # 先只複製 package.json 以利用 Docker layer cache
@@ -41,7 +41,7 @@ CMD ["pnpm", "exec", "prisma", "migrate", "deploy"]
 
 FROM node:20-alpine AS production
 WORKDIR /app
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl ffmpeg
 RUN npm install -g pnpm
 
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./

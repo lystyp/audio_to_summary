@@ -6,7 +6,17 @@
       "Bash(find /Users/daniel/practices/claude -type f \\\\\\(-name .github -o -name *.yml -o -name *.yaml -o -name .gitlab-ci.yml -o -name Jenkinsfile \\\\\\))",
       "Bash(git remote:*)",
       "Bash(git push:*)",
-      "Bash(grep -r \"GCS\\\\|GEMINI\\\\|SPEECH\" /Users/daniel/practices/claude --include=*.md --include=*.env*)"
+      "Bash(grep -r \"GCS\\\\|GEMINI\\\\|SPEECH\" /Users/daniel/practices/claude --include=*.md --include=*.env*)",
+      "Bash(git status:*)",
+      "Bash(pnpm --filter @daniel/shared add pino)",
+      "Bash(pnpm --filter @daniel/shared add -D @types/pino)",
+      "Bash(pnpm --filter @daniel/shared build)",
+      "WebFetch(domain:docs.cloud.google.com)",
+      "WebSearch",
+      "Bash(pnpm --filter @daniel/worker add fluent-ffmpeg)",
+      "Bash(pnpm --filter @daniel/worker add -D @types/fluent-ffmpeg)",
+      "Bash(pnpm --filter @daniel/server add fluent-ffmpeg)",
+      "Bash(pnpm --filter @daniel/server add -D @types/fluent-ffmpeg)"
     ]
   }
 }

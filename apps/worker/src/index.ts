@@ -1,4 +1,4 @@
-import { config, prisma, connectQueue, QUEUE_NAME } from '@daniel/shared';
+import { config, prisma, connectQueue, QUEUE_NAME, logger } from '@daniel/shared';
 import { transcribe } from './services/stt.js';
 import { summarize } from './services/llm.js';
 
@@ -6,40 +6,36 @@ import { summarize } from './services/llm.js';
 void config;
 
 async function start() {
-  console.log('Worker 啟動中...');
+  logger.info('Worker 啟動中...');
 
   const channel = await connectQueue();
   channel.prefetch(1);
 
-  console.log(`等待 ${QUEUE_NAME} 佇列的任務...`);
+  logger.info(`等待 ${QUEUE_NAME} 佇列的任務...`);
 
   channel.consume(QUEUE_NAME, async (msg) => {
     if (!msg) return;
 
     const payload = JSON.parse(msg.content.toString()) as { jobId: string };
-    console.log('[RabbitMQ Consume]', JSON.stringify({
-      queue: QUEUE_NAME,
-      payload,
-      timestamp: new Date().toISOString(),
-    }, null, 2));
+    logger.info({ queue: QUEUE_NAME, payload }, 'RabbitMQ consume');
 
     const { jobId } = payload;
-    console.log(`處理任務 ${jobId}`);
+    logger.info({ jobId }, '處理任務');
 
     try {
       const job = await prisma.job.findUnique({ where: { id: jobId } });
       if (!job) {
-        console.error(`找不到任務 ${jobId}`);
+        logger.error({ jobId }, '找不到任務');
         channel.ack(msg);
         return;
       }
 
       await prisma.job.update({ where: { id: jobId }, data: { status: 'PROCESSING' } });
 
-      console.log(`[${jobId}] 開始語音轉文字...`);
+      logger.info({ jobId }, '開始語音轉文字...');
       const transcript = await transcribe(job.storagePath);
 
-      console.log(`[${jobId}] 語音轉文字結果：${transcript}, 開始生成摘要...`);
+      logger.info({ jobId }, '語音轉文字結果:', { transcript: transcript.slice(0, 100) + '..., 開始摘要...' });
       const summary = await summarize(transcript);
 
       await prisma.job.update({
@@ -47,10 +43,10 @@ async function start() {
         data: { status: 'COMPLETED', transcript, summary },
       });
 
-      console.log(`[${jobId}] 完成`);
+      logger.info({ jobId }, '任務完成');
       channel.ack(msg);
     } catch (err) {
-      console.error(`[${jobId}] 處理失敗：`, err);
+      logger.error({ jobId, err }, '處理失敗');
       await prisma.job
         .update({
           where: { id: jobId },
@@ -59,14 +55,14 @@ async function start() {
             errorMessage: err instanceof Error ? err.message : String(err),
           },
         })
-        .catch(console.error);
+        .catch((e: unknown) => logger.error({ jobId, err: e }, 'DB 更新失敗狀態時出錯'));
       channel.ack(msg);
     }
   });
 }
 
 start().catch((err) => {
-  console.error('Worker 啟動失敗：', err);
+  logger.error(err, 'Worker 啟動失敗');
   process.exit(1);
 });
 

@@ -3,7 +3,7 @@ import express from 'express';
 import path from 'path';
 import swaggerUi from 'swagger-ui-express';
 
-import { config, prisma } from '@daniel/shared';
+import { config, prisma, logger } from '@daniel/shared';
 import { errorHandler } from './middleware/errors.js';
 import { requestDetails } from './middleware/requestDetails.js';
 import { jobsRouter } from './routes/jobs.js';
@@ -30,13 +30,13 @@ app.use(errorHandler);
 async function start() {
   await prisma.$connect();
   app.listen(config.PORT, () => {
-    console.log(`API 伺服器啟動於 http://localhost:${config.PORT}`);
-    console.log(`Swagger UI: http://localhost:${config.PORT}/docs`);
+    logger.info(`API 伺服器啟動於 http://localhost:${config.PORT}`);
+    logger.info(`Swagger UI: http://localhost:${config.PORT}/docs`);
   });
 }
 
 start().catch((err) => {
-  console.error('伺服器啟動失敗：', err);
+  logger.error(err, '伺服器啟動失敗');
   process.exit(1);
 });
 

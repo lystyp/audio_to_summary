@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import multer from 'multer';
+import { logger } from '@daniel/shared';
 
 export function errorHandler(
   err: Error,
@@ -17,6 +18,6 @@ export function errorHandler(
     return;
   }
 
-  console.error(err);
+  logger.error(err);
   res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: '伺服器發生錯誤' } });
 }

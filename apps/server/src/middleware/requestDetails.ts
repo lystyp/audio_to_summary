@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
+import { logger } from '@daniel/shared';
 
 export const requestDetails = (req: Request, res: Response, next: NextFunction) => {
 
@@ -15,15 +16,12 @@ export const requestDetails = (req: Request, res: Response, next: NextFunction) 
     reqDetails.body = req.body;
   }
 
-  console.log('[Audio server : Request]', JSON.stringify(reqDetails, null, 2));
+  logger.info({ req: reqDetails }, 'incoming request');
 
   // 攔截 res.json 以取得 response body
   const originalJson = res.json.bind(res);
   res.json = (body: unknown) => {
-    console.log('[Audio server : Response]', JSON.stringify({
-      status: res.statusCode,
-      body,
-    }, null, 2));
+    logger.info({ status: res.statusCode, body }, 'outgoing response');
     return originalJson(body);
   };
 
