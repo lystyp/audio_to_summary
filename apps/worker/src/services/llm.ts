@@ -14,7 +14,7 @@ export async function summarize(transcript: string): Promise<string> {
       - 僅保留關鍵資訊
       - 不要加入主觀解釋
       - 保留原意' 
-      - 如果沒有摘要內容或是其他非預期情形則直接回傳"None"
+      - 如果沒有摘要內容或是其他非預期情形則直接回傳"沒有可摘要的內容"
       要摘要的內容如下：`,
       transcript,
   ]);
