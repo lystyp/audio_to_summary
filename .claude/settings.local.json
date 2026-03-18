@@ -13,7 +13,8 @@
       "WebFetch(domain:www.prisma.io)",
       "Bash(pnpm add:*)",
       "Bash(pnpm generate:*)",
-      "Bash(find /Users/daniel/practices/claude -type f -name *.test.ts -o -name *.spec.ts)"
+      "Bash(find /Users/daniel/practices/claude -type f -name *.test.ts -o -name *.spec.ts)",
+      "Bash(pnpm remove:*)"
     ]
   }
 }

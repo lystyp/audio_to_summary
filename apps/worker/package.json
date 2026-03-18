@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "@daniel/shared": "workspace:*",
-    "openai": "^4.73.0"
+    "@google-cloud/speech": "^7.3.0",
+    "@google/generative-ai": "^0.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.1",

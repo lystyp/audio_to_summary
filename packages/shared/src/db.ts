@@ -16,7 +16,8 @@ const globalForPrisma = globalThis as unknown as { prisma: PrismaClientWithLogs 
 export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 prisma.$on('query', (e) => {
-  const params = JSON.parse(e.params) as unknown[];
+  let params: unknown;
+  try { params = JSON.parse(e.params); } catch { params = e.params; }
   const query = e.query.replace(/RETURNING[\s\S]+$/, 'RETURNING ...');
   console.log(
     `[DB Query] ${e.duration}ms | ${e.timestamp.toISOString()}\n` +

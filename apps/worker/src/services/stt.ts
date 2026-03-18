@@ -1,15 +1,31 @@
-import OpenAI, { toFile } from 'openai';
-import { config, storageProvider } from '@daniel/shared';
+import speech from '@google-cloud/speech';
 import path from 'path';
+import { config } from '@daniel/shared';
 
-const openai = new OpenAI({ apiKey: config.OPENAI_API_KEY });
+const client = new speech.SpeechClient();
+
+const { AudioEncoding } = speech.protos.google.cloud.speech.v1.RecognitionConfig;
+
+const ENCODING_MAP: Record<string, speech.protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding> = {
+  '.mp3': AudioEncoding.MP3,
+  '.wav': AudioEncoding.LINEAR16,
+  '.ogg': AudioEncoding.OGG_OPUS,
+  '.m4a': AudioEncoding.MP3,
+};
 
 export async function transcribe(storagePath: string): Promise<string> {
-  const stream = storageProvider.download(storagePath);
-  const filename = path.basename(storagePath);
-  const response = await openai.audio.transcriptions.create({
-    model: config.WHISPER_MODEL,
-    file: await toFile(stream, filename),
+  const ext = path.extname(storagePath).toLowerCase();
+  const encoding = ENCODING_MAP[ext] ?? 'ENCODING_UNSPECIFIED';
+
+  const [operation] = await client.longRunningRecognize({
+    audio: { uri: storagePath },
+    config: {
+      encoding,
+      languageCode: config.STT_LANGUAGE_CODE,
+      enableAutomaticPunctuation: true,
+    },
   });
-  return response.text;
+
+  const [response] = await operation.promise();
+  return response.results?.map((r) => r.alternatives?.[0]?.transcript ?? '').join('\n') ?? '';
 }

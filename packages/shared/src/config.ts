@@ -5,9 +5,8 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   DATABASE_URL: z.string(),
   RABBITMQ_URL: z.string(),
-  OPENAI_API_KEY: z.string(),
-  WHISPER_MODEL: z.string().default('whisper-1'),
-  OPENAI_CHAT_MODEL: z.string().default('gpt-4o-mini'),
+  GEMINI_API_KEY: z.string(),
+  STT_LANGUAGE_CODE: z.string().default('zh-TW'),
   GCS_BUCKET: z.string(),
   MAX_FILE_SIZE_MB: z.coerce.number().default(100),
 });
