@@ -2,6 +2,9 @@
 
 上傳音訊檔案，系統自動進行語音轉文字（Google Cloud Speech-to-Text v2）並以 Gemini LLM 產生摘要。結果可透過 SSE 即時串流或直接查詢取得。
 
+- **GitHub**：[lystyp/audio_to_summary](https://github.com/lystyp/audio_to_summary)
+- **Demo**（部署於 GCP VM）：[https://janny.page/](https://janny.page/)
+
 ---
 
 ## 專案介紹
@@ -25,7 +28,7 @@ API 存入 GCS + 建立 DB 記錄 (PENDING) + 推送至 RabbitMQ
       ↓
 Worker 消費佇列
       ↓
-Google Cloud STT (Batch Recognize, Chirp 2) → transcript
+Google Cloud STT (Batch Recognize, Chirp 3) → transcript
       ↓
 Gemini API → summary
       ↓
@@ -50,7 +53,7 @@ sequenceDiagram
     participant GCS as Google Cloud Storage
     participant MQ as RabbitMQ
     participant Worker
-    participant STT as Google STT (Chirp 2)
+    participant STT as Google STT (Chirp 3)
     participant LLM as Gemini API
     participant DB as PostgreSQL
 
@@ -65,7 +68,7 @@ sequenceDiagram
 
     MQ->>Worker: consume job
     Worker->>DB: UPDATE → PROCESSING
-    Worker->>STT: Batch Recognize (GCS URI)
+    Worker->>STT: Batch Recognize 
     STT-->>Worker: transcript
     Worker->>LLM: generateContent(transcript)
     LLM-->>Worker: summary
@@ -86,8 +89,8 @@ sequenceDiagram
 | ORM | Prisma 5 + PostgreSQL 16 |
 | 訊息佇列 | RabbitMQ 3（durable queue，prefetch=1） |
 | 物件儲存 | Google Cloud Storage |
-| 語音轉文字 | Google Cloud Speech-to-Text v2（Chirp 2，Batch Recognize） |
-| LLM 摘要 | Google Gemini API（gemini-2.0-flash-lite） |
+| 語音轉文字 | Google Cloud Speech-to-Text v2（Chirp 3，Batch Recognize） |
+| LLM 摘要 | Google Gemini API（gemini-3-flash-preview） |
 | 容器化 | Docker（multi-stage build）+ docker-compose |
 | 套件管理 | pnpm 9（workspace monorepo） |
 
@@ -156,26 +159,6 @@ docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d
 | Swagger UI | http://localhost:3000/docs |
 | RabbitMQ 管理介面 | http://localhost:15672（guest / guest） |
 
-#### 本機開發（不用 Docker）
-
-需先確保本機有 PostgreSQL 與 RabbitMQ，或只啟動依賴服務：
-
-```bash
-# 只啟動 PostgreSQL 和 RabbitMQ
-docker compose up postgres rabbitmq -d
-
-# 安裝依賴
-pnpm install
-
-# 執行資料庫 migration
-pnpm migrate:local
-
-# Terminal 1：啟動 API server
-pnpm dev:server
-
-# Terminal 2：啟動 Worker
-pnpm dev:worker
-```
 
 #### 可用的 pnpm scripts
 
@@ -213,6 +196,7 @@ pnpm dev:worker
 - Content-Type: `multipart/form-data`
 - 支援格式：`.mp3`、`.wav`、`.ogg`、`.m4a`
 - 檔案大小上限：`MAX_FILE_SIZE_MB`（預設 100 MB）
+- `.m4a` 檔案上傳時會自動透過 ffmpeg 轉換為 `.wav` 後再存入 GCS
 
 **Request**
 
@@ -397,8 +381,7 @@ es.onmessage = (e) => {
 **Response Headers**
 
 ```
-Content-Type: audio/mpeg        # 依原始副檔名決定
-Content-Disposition: inline
+Content-Type: audio/mpeg        # 依原始副檔名決定（mp3 → audio/mpeg、wav → audio/wav、ogg → audio/ogg、m4a → audio/mp4）
 ```
 
 **錯誤回應**
@@ -447,7 +430,7 @@ curl http://localhost:3000/api/jobs/JOB_ID/audio -o output.mp3
 
 | HTTP 狀態碼 | code | 原因 |
 |-------------|------|------|
-| `400` | `JOB_NOT_RETRYABLE` | 任務狀態非 FAILED，無法重試 |
+| `400` | `INVALID_STATUS` | 任務狀態非 FAILED，無法重試 |
 | `404` | `JOB_NOT_FOUND` | 找不到指定任務 |
 | `500` | `INTERNAL_ERROR` | 伺服器錯誤 |
 
