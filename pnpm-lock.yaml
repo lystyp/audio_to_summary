@@ -7,10 +7,17 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@prisma/client':
+        specifier: 5.22.0
+        version: 5.22.0(prisma@5.22.0)
     devDependencies:
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -85,9 +92,9 @@ importers:
 
   packages/shared:
     dependencies:
-      '@prisma/client':
-        specifier: 5.22.0
-        version: 5.22.0(prisma@5.22.0)
+      '@google-cloud/storage':
+        specifier: ^7.0.0
+        version: 7.19.0
       amqplib:
         specifier: ^0.10.4
         version: 0.10.9
@@ -101,9 +108,6 @@ importers:
       '@types/node':
         specifier: ^22.10.1
         version: 22.19.15
-      prisma:
-        specifier: ^5.22.0
-        version: 5.22.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

@@ -16,7 +16,14 @@ async function start() {
   channel.consume(QUEUE_NAME, async (msg) => {
     if (!msg) return;
 
-    const { jobId } = JSON.parse(msg.content.toString()) as { jobId: string };
+    const payload = JSON.parse(msg.content.toString()) as { jobId: string };
+    console.log('[RabbitMQ Consume]', JSON.stringify({
+      queue: QUEUE_NAME,
+      payload,
+      timestamp: new Date().toISOString(),
+    }, null, 2));
+
+    const { jobId } = payload;
     console.log(`處理任務 ${jobId}`);
 
     try {

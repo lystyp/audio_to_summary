@@ -16,9 +16,19 @@ export async function connectQueue(): Promise<Channel> {
 
 export async function publishJob(payload: { jobId: string }): Promise<void> {
   const ch = await connectQueue();
-  ch.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(payload)), {
+  const message = JSON.stringify(payload);
+
+  console.log('[RabbitMQ Publish]', JSON.stringify({
+    queue: QUEUE_NAME,
+    payload,
+    timestamp: new Date().toISOString(),
+  }, null, 2));
+
+  const ok = ch.sendToQueue(QUEUE_NAME, Buffer.from(message), {
     persistent: true,
   });
+
+  console.log(`[RabbitMQ Publish] result: ${ok ? 'queued' : 'buffer full (backpressure)'}`);
 }
 
 export async function closeQueue(): Promise<void> {

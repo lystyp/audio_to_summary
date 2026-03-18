@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 
 import { config, prisma } from '@daniel/shared';
 import { errorHandler } from './middleware/errors.js';
+import { requestDetails } from './middleware/requestDetails.js';
 import { jobsRouter } from './routes/jobs.js';
 import { swaggerSpec } from './swagger.js';
 
@@ -13,6 +14,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const app = express();
 
 app.use(express.json());
+app.use(requestDetails);
 
 // 前端靜態檔（packages/api/public/）
 app.use(express.static(path.join(__dirname, '../../public')));
