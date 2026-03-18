@@ -17,8 +17,7 @@ app.use(express.json());
 app.use(requestDetails);
 
 // 前端靜態檔（packages/api/public/）
-app.use(express.static(path.join(__dirname, '../../public')));
-
+app.use(express.static(path.join(__dirname, '../public')));
 // Swagger UI
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

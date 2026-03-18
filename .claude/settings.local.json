@@ -14,7 +14,13 @@
       "Bash(pnpm add:*)",
       "Bash(pnpm generate:*)",
       "Bash(find /Users/daniel/practices/claude -type f -name *.test.ts -o -name *.spec.ts)",
-      "Bash(pnpm remove:*)"
+      "Bash(pnpm remove:*)",
+      "Bash(find /Users/daniel/practices/claude -name *.prisma -type f)",
+      "Bash(git stash:*)",
+      "Bash(npx tsc:*)",
+      "Bash(find /Users/daniel/practices/claude -path */busboy/lib* -name *.js)",
+      "Bash(pnpm --filter @daniel/worker add @google-cloud/speech@latest)",
+      "Bash(pnpm --filter @daniel/worker exec tsc --noEmit)"
     ]
   }
 }

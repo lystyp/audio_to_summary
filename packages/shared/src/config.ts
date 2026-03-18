@@ -6,7 +6,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string(),
   RABBITMQ_URL: z.string(),
   GEMINI_API_KEY: z.string(),
-  STT_LANGUAGE_CODE: z.string().default('zh-TW'),
+  STT_LANGUAGE_CODE: z.string().default('cmn-Hant-TW'),
   GCS_BUCKET: z.string(),
   MAX_FILE_SIZE_MB: z.coerce.number().default(100),
 });

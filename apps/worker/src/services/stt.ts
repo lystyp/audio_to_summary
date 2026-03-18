@@ -1,31 +1,44 @@
-import speech from '@google-cloud/speech';
-import path from 'path';
+import { v2, protos } from '@google-cloud/speech';
 import { config } from '@daniel/shared';
 
-const client = new speech.SpeechClient();
+const location =  'asia-southeast1'; // 例如: 'us'、'eu'、'asia-south1'
 
-const { AudioEncoding } = speech.protos.google.cloud.speech.v1.RecognitionConfig;
+const client = new v2.SpeechClient({
+  apiEndpoint: `${location}-speech.googleapis.com`,
+});
 
-const ENCODING_MAP: Record<string, speech.protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding> = {
-  '.mp3': AudioEncoding.MP3,
-  '.wav': AudioEncoding.LINEAR16,
-  '.ogg': AudioEncoding.OGG_OPUS,
-  '.m4a': AudioEncoding.MP3,
-};
+export async function transcribe(gcsUri: string): Promise<string> {
+  const projectId = await client.getProjectId();
+  const recognizer = `projects/${projectId}/locations/${location}/recognizers/_`;
 
-export async function transcribe(storagePath: string): Promise<string> {
-  const ext = path.extname(storagePath).toLowerCase();
-  const encoding = ENCODING_MAP[ext] ?? 'ENCODING_UNSPECIFIED';
-
-  const [operation] = await client.longRunningRecognize({
-    audio: { uri: storagePath },
+  const request: protos.google.cloud.speech.v2.IBatchRecognizeRequest = {
+    recognizer,
     config: {
-      encoding,
-      languageCode: config.STT_LANGUAGE_CODE,
-      enableAutomaticPunctuation: true,
+      languageCodes: ["cmn-Hant-TW", "en-US"], // 例如 'en-US' / 'cmn-Hant-TW'
+      model: 'chirp_2',
+      autoDecodingConfig: {},
+      features: {
+        enableAutomaticPunctuation: true,
+      },
     },
-  });
+    files: [{ uri: gcsUri }],
+    recognitionOutputConfig: {
+      inlineResponseConfig: {},
+    },
+  };
 
-  const [response] = await operation.promise();
-  return response.results?.map((r) => r.alternatives?.[0]?.transcript ?? '').join('\n') ?? '';
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('STT timeout: exceeded 60s')), 60_000),
+  );
+
+  const [operation] = await client.batchRecognize(request);
+  const [response] = await Promise.race([operation.promise(), timeout]);
+
+  const fileResult = response.results?.[gcsUri];
+  const results = fileResult?.transcript?.results ?? [];
+
+  return results
+    .map((r) => r.alternatives?.[0]?.transcript ?? '')
+    .filter(Boolean)
+    .join('\n');
 }

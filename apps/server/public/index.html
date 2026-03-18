@@ -3,168 +3,336 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>音訊轉錄與摘要</title>
+  <title>音訊分析</title>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, sans-serif; background: #f5f5f5; color: #333; padding: 2rem; }
-    h1 { margin-bottom: 1.5rem; font-size: 1.5rem; }
-    .card { background: white; border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,.1); }
-    label { display: block; margin-bottom: .5rem; font-weight: 600; }
-    input[type=file] { margin-bottom: 1rem; }
-    button { background: #2563eb; color: white; border: none; padding: .6rem 1.2rem; border-radius: 6px; cursor: pointer; font-size: 1rem; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .status { margin-top: 1rem; }
-    .badge { display: inline-block; padding: .2rem .6rem; border-radius: 4px; font-size: .85rem; font-weight: 600; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a1a; min-height: 100vh; }
+
+    .container { max-width: 780px; margin: 0 auto; padding: 2rem 1rem; }
+    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; color: #111; }
+
+    .card { background: #fff; border-radius: 12px; padding: 1.5rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+    /* Upload */
+    .upload-zone { border: 2px dashed #d1d5db; border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; }
+    .upload-zone:hover, .upload-zone.drag { border-color: #2563eb; background: #eff6ff; }
+    .upload-zone input { display: none; }
+    .upload-zone .hint { color: #6b7280; font-size: .9rem; margin-top: .4rem; }
+    .upload-zone .filename { font-weight: 600; color: #2563eb; margin-top: .5rem; }
+    .btn { display: inline-flex; align-items: center; gap: .4rem; background: #2563eb; color: #fff; border: none; padding: .6rem 1.4rem; border-radius: 8px; cursor: pointer; font-size: .95rem; font-weight: 500; margin-top: 1rem; transition: background .2s; }
+    .btn:hover { background: #1d4ed8; }
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+    .btn-sm { padding: .35rem .8rem; font-size: .82rem; border-radius: 6px; margin-top: 0; }
+    .btn-ghost { background: transparent; border: 1px solid #d1d5db; color: #374151; }
+    .btn-ghost:hover { background: #f9fafb; }
+    .btn-danger { background: transparent; border: 1px solid #fca5a5; color: #dc2626; }
+    .btn-danger:hover { background: #fef2f2; }
+    .error-msg { color: #dc2626; font-size: .88rem; margin-top: .6rem; }
+
+    /* List header */
+    .list-header { margin-bottom: 1rem; }
+    .list-header strong { font-size: 1rem; }
+
+    /* Job item (wrapper) */
+    .job-item { border-bottom: 1px solid #f3f4f6; }
+    .job-item:last-child { border-bottom: none; }
+
+    /* Job row */
+    .job-row { display: flex; align-items: center; gap: .75rem; padding: .75rem .5rem; cursor: pointer; border-radius: 6px; transition: background .15s; }
+    .job-row:hover { background: #f9fafb; }
+    .job-row.expanded { background: #eff6ff; }
+    .job-name { flex: 1; font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .job-time { font-size: .78rem; color: #9ca3af; white-space: nowrap; }
+    .empty { color: #9ca3af; font-size: .9rem; text-align: center; padding: 1.5rem 0; }
+
+    /* Expand chevron */
+    .chevron { font-size: .75rem; color: #9ca3af; flex-shrink: 0; transition: transform .2s; }
+    .chevron.open { transform: rotate(180deg); }
+
+    /* Badge */
+    .badge { display: inline-block; padding: .2rem .55rem; border-radius: 99px; font-size: .75rem; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
     .PENDING    { background: #e5e7eb; color: #374151; }
     .PROCESSING { background: #fef3c7; color: #92400e; }
     .COMPLETED  { background: #d1fae5; color: #065f46; }
     .FAILED     { background: #fee2e2; color: #991b1b; }
-    pre { white-space: pre-wrap; word-break: break-word; background: #f9fafb; padding: 1rem; border-radius: 6px; font-size: .9rem; margin-top: .5rem; }
-    .section-title { font-weight: 600; margin-bottom: .4rem; color: #555; }
-    #jobList { list-style: none; }
-    #jobList li { padding: .5rem; border-bottom: 1px solid #eee; cursor: pointer; }
-    #jobList li:hover { background: #f0f7ff; }
-    .error-msg { color: #dc2626; margin-top: .5rem; font-size: .9rem; }
+
+    /* Spinner */
+    .spinner { width: 14px; height: 14px; border: 2px solid #d97706; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Detail panel (inline, per job) */
+    .job-detail { display: none; padding: 0 .75rem .6rem 2.25rem; border-top: 1px solid #f3f4f6; }
+    .job-detail.open { display: block; }
+    .detail-section { margin-bottom: .6rem; }
+    .detail-label { font-size: .72rem; font-weight: 600; color: #9ca3af; text-transform: uppercase; letter-spacing: .05em; margin-bottom: .25rem; }
+    .detail-actions { display: flex; gap: .5rem; margin: .5rem 0; flex-wrap: wrap; align-items: center; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #f9fafb; border: 1px solid #e5e7eb; padding: .55rem .75rem; border-radius: 6px; font-size: .83rem; line-height: 1.55; font-family: inherit; max-height: 120px; overflow-y: auto; }
+    .error-pre { color: #dc2626; }
+    audio { width: 100%; height: 32px; border-radius: 6px; }
+    .detail-loading { color: #9ca3af; font-size: .83rem; padding: .35rem 0; }
   </style>
 </head>
 <body>
-  <h1>音訊轉錄與摘要服務</h1>
+<div class="container">
+  <h1>音訊分析</h1>
 
+  <!-- Upload card -->
   <div class="card">
-    <label for="audioFile">上傳音訊檔案（.mp3 / .wav）</label>
-    <input type="file" id="audioFile" accept=".mp3,.wav,.ogg,.m4a" />
-    <button id="uploadBtn">上傳並開始處理</button>
-    <div id="uploadError" class="error-msg"></div>
+    <div class="upload-zone" id="uploadZone">
+      <input type="file" id="audioFile" accept=".mp3,.wav,.ogg,.m4a" />
+      <div>點擊或拖曳音訊檔案至此</div>
+      <div class="hint">.mp3 / .wav / .ogg / .m4a</div>
+      <div class="filename" id="selectedName"></div>
+    </div>
+    <button class="btn" id="uploadBtn" disabled>上傳並開始分析</button>
+    <div class="error-msg" id="uploadError"></div>
   </div>
 
-  <div class="card" id="resultCard" style="display:none">
-    <div class="status">
-      狀態：<span id="statusBadge" class="badge">-</span>
-      <span id="jobIdDisplay" style="margin-left:1rem;font-size:.85rem;color:#888;"></span>
-    </div>
-    <div id="transcriptSection" style="display:none;margin-top:1rem">
-      <div class="section-title">逐字稿</div>
-      <pre id="transcriptText"></pre>
-    </div>
-    <div id="summarySection" style="display:none;margin-top:1rem">
-      <div class="section-title">摘要</div>
-      <pre id="summaryText"></pre>
-    </div>
-    <div id="errorSection" style="display:none;margin-top:1rem">
-      <div class="section-title">錯誤訊息</div>
-      <pre id="errorText" style="color:#dc2626;"></pre>
-    </div>
-  </div>
-
+  <!-- History card -->
   <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem">
-      <strong>歷史任務</strong>
-      <button id="refreshBtn" style="font-size:.85rem;padding:.3rem .8rem">重新整理</button>
+    <div class="list-header">
+      <strong>歷史紀錄</strong>
     </div>
-    <ul id="jobList"><li style="color:#888">載入中...</li></ul>
+    <div id="jobList"><div class="empty">載入中...</div></div>
   </div>
+</div>
 
-  <script>
-    const uploadBtn = document.getElementById('uploadBtn');
-    const audioFile = document.getElementById('audioFile');
-    const uploadError = document.getElementById('uploadError');
-    const resultCard = document.getElementById('resultCard');
-    const statusBadge = document.getElementById('statusBadge');
-    const jobIdDisplay = document.getElementById('jobIdDisplay');
-    const transcriptSection = document.getElementById('transcriptSection');
-    const transcriptText = document.getElementById('transcriptText');
-    const summarySection = document.getElementById('summarySection');
-    const summaryText = document.getElementById('summaryText');
-    const errorSection = document.getElementById('errorSection');
-    const errorText = document.getElementById('errorText');
-    const jobList = document.getElementById('jobList');
+<script>
+  // ── state ──────────────────────────────────────────────
+  const jobs = new Map();          // id → job summary (from list API)
+  const detailData = new Map();    // id → full job object (from detail API, lazy)
+  const expandedJobs = new Set();  // ids currently expanded
+  const eventSources = new Map();  // id → EventSource
 
-    let currentEventSource = null;
+  // ── DOM refs ───────────────────────────────────────────
+  const uploadZone   = document.getElementById('uploadZone');
+  const audioFile    = document.getElementById('audioFile');
+  const selectedName = document.getElementById('selectedName');
+  const uploadBtn    = document.getElementById('uploadBtn');
+  const uploadError  = document.getElementById('uploadError');
+  const jobListEl    = document.getElementById('jobList');
 
-    function renderJob(job) {
-      resultCard.style.display = 'block';
-      statusBadge.textContent = job.status;
-      statusBadge.className = `badge ${job.status}`;
-      jobIdDisplay.textContent = job.id;
+  // ── upload zone ────────────────────────────────────────
+  uploadZone.addEventListener('click', () => audioFile.click());
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag');
+    const f = e.dataTransfer.files[0];
+    if (f) { audioFile.files = e.dataTransfer.files; onFileSelected(f); }
+  });
+  audioFile.addEventListener('change', () => {
+    if (audioFile.files[0]) onFileSelected(audioFile.files[0]);
+  });
+  function onFileSelected(f) {
+    selectedName.textContent = f.name;
+    uploadBtn.disabled = false;
+    uploadError.textContent = '';
+  }
 
-      transcriptSection.style.display = job.transcript ? 'block' : 'none';
-      if (job.transcript) transcriptText.textContent = job.transcript;
+  // ── upload ─────────────────────────────────────────────
+  uploadBtn.addEventListener('click', async () => {
+    const file = audioFile.files[0];
+    if (!file) return;
+    uploadBtn.disabled = true;
+    uploadError.textContent = '';
 
-      summarySection.style.display = job.summary ? 'block' : 'none';
-      if (job.summary) summaryText.textContent = job.summary;
-
-      errorSection.style.display = job.errorMessage ? 'block' : 'none';
-      if (job.errorMessage) errorText.textContent = job.errorMessage;
-    }
-
-    function startSSE(jobId) {
-      if (currentEventSource) currentEventSource.close();
-      currentEventSource = new EventSource(`/api/jobs/${jobId}/events`);
-      currentEventSource.onmessage = (e) => {
-        const job = JSON.parse(e.data);
-        renderJob(job);
-        if (job.status === 'COMPLETED' || job.status === 'FAILED') {
-          currentEventSource.close();
-          loadJobs();
-        }
-      };
-      currentEventSource.onerror = () => currentEventSource.close();
-    }
-
-    uploadBtn.addEventListener('click', async () => {
-      const file = audioFile.files[0];
-      if (!file) { uploadError.textContent = '請選擇檔案'; return; }
-      uploadError.textContent = '';
-      uploadBtn.disabled = true;
-
-      const form = new FormData();
-      form.append('audio', file);
-
-      try {
-        const res = await fetch('/api/jobs', { method: 'POST', body: form });
-        const json = await res.json();
-        if (!res.ok) { uploadError.textContent = json.error?.message ?? '上傳失敗'; return; }
-        startSSE(json.data.jobId);
-        renderJob({ id: json.data.jobId, status: json.data.status });
-        loadJobs();
-      } catch (e) {
-        uploadError.textContent = '網路錯誤';
-      } finally {
-        uploadBtn.disabled = false;
-      }
-    });
-
-    async function loadJobs() {
-      try {
-        const res = await fetch('/api/jobs?limit=20');
-        const json = await res.json();
-        if (!json.success) return;
-        jobList.innerHTML = json.data.items.length === 0
-          ? '<li style="color:#888">尚無任務</li>'
-          : json.data.items.map(j =>
-              `<li onclick="viewJob('${j.id}')">
-                <span class="badge ${j.status}">${j.status}</span>
-                &nbsp;${j.originalName}
-                <small style="color:#888;margin-left:.5rem">${new Date(j.createdAt).toLocaleString()}</small>
-              </li>`
-            ).join('');
-      } catch {}
-    }
-
-    async function viewJob(id) {
-      const res = await fetch(`/api/jobs/${id}`);
+    const form = new FormData();
+    form.append('audio', file);
+    try {
+      const res  = await fetch('/api/jobs', { method: 'POST', body: form });
       const json = await res.json();
-      if (json.success) {
-        renderJob(json.data);
-        if (json.data.status === 'PENDING' || json.data.status === 'PROCESSING') {
-          startSSE(id);
-        }
+      if (!res.ok) { uploadError.textContent = json.error?.message ?? '上傳失敗'; uploadBtn.disabled = false; return; }
+      const job = { id: json.data.jobId, status: 'PENDING', originalName: file.name, createdAt: new Date().toISOString() };
+      jobs.set(job.id, job);
+      expandedJobs.add(job.id);
+      renderList();
+      watchJob(job.id);
+      selectedName.textContent = '';
+      audioFile.value = '';
+      uploadBtn.disabled = true;
+    } catch {
+      uploadError.textContent = '網路錯誤';
+      uploadBtn.disabled = false;
+    }
+  });
+
+  // ── SSE ────────────────────────────────────────────────
+  function watchJob(id) {
+    if (eventSources.has(id)) return;
+    const es = new EventSource(`/api/jobs/${id}/events`);
+    eventSources.set(id, es);
+    es.onmessage = e => {
+      const job = JSON.parse(e.data);
+      jobs.set(id, job);
+      if (detailData.has(id)) detailData.set(id, job);
+      renderJobRow(id);
+      if (job.status === 'COMPLETED' || job.status === 'FAILED') {
+        es.close(); eventSources.delete(id);
+        if (expandedJobs.has(id)) fetchDetail(id, true).then(() => renderJobDetail(id));
       }
+    };
+    es.onerror = () => { es.close(); eventSources.delete(id); };
+  }
+
+  // ── render single item helpers ─────────────────────────
+  function renderJobRow(id) {
+    const row = document.getElementById(`row-${id}`);
+    if (!row) return;
+    const j = jobs.get(id);
+    if (!j) return;
+    const isExpanded = expandedJobs.has(id);
+    row.className = `job-row${isExpanded ? ' expanded' : ''}`;
+    row.innerHTML = `
+      ${j.status === 'PENDING' || j.status === 'PROCESSING' ? '<div class="spinner"></div>' : ''}
+      <span class="badge ${j.status}">${statusLabel(j.status)}</span>
+      <span class="job-name" title="${j.originalName}">${j.originalName}</span>
+      <span class="job-time">${fmtTime(j.createdAt)}</span>
+      <span class="chevron ${isExpanded ? 'open' : ''}">▼</span>`;
+  }
+
+  function renderJobDetail(id) {
+    const panel = document.getElementById(`detail-${id}`);
+    if (!panel) return;
+    panel.innerHTML = renderDetailContent(id, jobs.get(id)?.status);
+  }
+
+  // ── detail fetch ───────────────────────────────────────
+  async function fetchDetail(id, force = false) {
+    if (!force && detailData.has(id)) return detailData.get(id);
+    try {
+      const res  = await fetch(`/api/jobs/${id}`);
+      const json = await res.json();
+      if (json.success) { detailData.set(id, json.data); return json.data; }
+    } catch {}
+    return null;
+  }
+
+  // ── toggle expand ──────────────────────────────────────
+  async function toggleDetail(id) {
+    const row   = document.getElementById(`row-${id}`);
+    const panel = document.getElementById(`detail-${id}`);
+
+    if (expandedJobs.has(id)) {
+      expandedJobs.delete(id);
+      row?.classList.remove('expanded');
+      panel?.classList.remove('open');
+      row?.querySelector('.chevron')?.classList.remove('open');
+      return;
     }
 
-    document.getElementById('refreshBtn').addEventListener('click', loadJobs);
+    expandedJobs.add(id);
+    row?.classList.add('expanded');
+    panel?.classList.add('open');
+    row?.querySelector('.chevron')?.classList.add('open');
 
-    loadJobs();
-  </script>
+    // show immediate state (loading or cached)
+    renderJobDetail(id);
+
+    // fetch detail only if SSE isn't already running (SSE close will trigger renderJobDetail)
+    if (!detailData.has(id) && !eventSources.has(id)) {
+      await fetchDetail(id);
+      renderJobDetail(id);
+    }
+  }
+
+  // ── retry ──────────────────────────────────────────────
+  async function retryJob(id, e) {
+    e.stopPropagation();
+    const res  = await fetch(`/api/jobs/${id}/retry`, { method: 'POST' });
+    const json = await res.json();
+    if (!res.ok) { alert(json.error?.message ?? '重試失敗'); return; }
+    const job = jobs.get(id);
+    if (job) { job.status = 'PENDING'; job.errorMessage = null; }
+    detailData.delete(id);
+    renderJobRow(id);    // show spinner immediately
+    renderJobDetail(id); // clear detail panel (shows 處理中...)
+    watchJob(id);        // SSE will close when done → renderJobDetail
+  }
+
+  // ── render list ────────────────────────────────────────
+  function renderList() {
+    if (jobs.size === 0) { jobListEl.innerHTML = '<div class="empty">尚無紀錄</div>'; return; }
+    const sorted = [...jobs.values()].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    jobListEl.innerHTML = sorted.map(j => {
+      const isExpanded = expandedJobs.has(j.id);
+      return `
+      <div class="job-item">
+        <div class="job-row ${isExpanded ? 'expanded' : ''}" id="row-${j.id}" onclick="toggleDetail('${j.id}')">
+          ${j.status === 'PENDING' || j.status === 'PROCESSING'
+            ? '<div class="spinner"></div>'
+            : ''}
+          <span class="badge ${j.status}">${statusLabel(j.status)}</span>
+          <span class="job-name" title="${j.originalName}">${j.originalName}</span>
+          <span class="job-time">${fmtTime(j.createdAt)}</span>
+          <span class="chevron ${isExpanded ? 'open' : ''}">▼</span>
+        </div>
+        <div class="job-detail ${isExpanded ? 'open' : ''}" id="detail-${j.id}">
+          ${isExpanded ? renderDetailContent(j.id, j.status) : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── render detail content ──────────────────────────────
+  function renderDetailContent(id, status) {
+    const detail = detailData.get(id);
+
+    if (!detail) {
+      if (status === 'PENDING' || status === 'PROCESSING') {
+        return '<div class="detail-loading">處理中，請稍候...</div>';
+      }
+      return '<div class="detail-loading">載入中...</div>';
+    }
+
+    let html = '<div class="detail-actions">';
+    if (detail.status === 'COMPLETED') {
+      html += `<audio controls src="/api/jobs/${id}/audio"></audio>`;
+    }
+    if (detail.status === 'FAILED') {
+      html += `<button class="btn btn-danger btn-sm" onclick="retryJob('${id}',event)">↺ 重試</button>`;
+    }
+    html += '</div>';
+
+    if (detail.transcript) html += `<div class="detail-section"><div class="detail-label">逐字稿</div><pre>${esc(detail.transcript)}</pre></div>`;
+    if (detail.summary)    html += `<div class="detail-section"><div class="detail-label">摘要</div><pre>${esc(detail.summary)}</pre></div>`;
+    if (detail.errorMessage) html += `<div class="detail-section"><div class="detail-label">錯誤訊息</div><pre class="error-pre">${esc(detail.errorMessage)}</pre></div>`;
+
+    if (!detail.transcript && !detail.summary && !detail.errorMessage) {
+      html += '<div class="detail-loading">暫無詳細資料</div>';
+    }
+
+    return html;
+  }
+
+  // ── load jobs ──────────────────────────────────────────
+  async function loadJobs() {
+    try {
+      const res  = await fetch('/api/jobs?limit=50');
+      const json = await res.json();
+      if (!json.success) return;
+      jobs.clear();
+      json.data.items.forEach(j => jobs.set(j.id, j));
+      json.data.items
+        .filter(j => j.status === 'PENDING' || j.status === 'PROCESSING')
+        .forEach(j => watchJob(j.id));
+      renderList();
+    } catch {}
+  }
+
+  // ── helpers ────────────────────────────────────────────
+  function statusLabel(s) {
+    return { PENDING: '待處理', PROCESSING: '處理中', COMPLETED: '完成', FAILED: '失敗' }[s] ?? s;
+  }
+  function fmtTime(iso) {
+    return new Date(iso).toLocaleString('zh-TW', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  loadJobs();
+</script>
 </body>
 </html>

@@ -39,7 +39,7 @@ async function start() {
       console.log(`[${jobId}] 開始語音轉文字...`);
       const transcript = await transcribe(job.storagePath);
 
-      console.log(`[${jobId}] 開始生成摘要...`);
+      console.log(`[${jobId}] 語音轉文字結果：${transcript}, 開始生成摘要...`);
       const summary = await summarize(transcript);
 
       await prisma.job.update({

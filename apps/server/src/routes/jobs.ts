@@ -1,49 +1,19 @@
+import path from 'path';
 import { Router, Request, Response, NextFunction } from 'express';
-import { prisma, publishJob } from '@daniel/shared';
+import { prisma, publishJob, storageProvider } from '@daniel/shared';
 import { upload } from '../middleware/upload.js';
 import { register, unregister } from '../sse.js';
+import {
+  CreateJobResponseSchema,
+  GetJobResponseSchema,
+  ListJobsResponseSchema,
+  RetryJobResponseSchema,
+} from '../schemas/job.schema.js';
 
-export const jobsRouter:Router = Router();
+export const jobsRouter: Router = Router();
 
-/**
- * @swagger
- * /api/jobs:
- *   post:
- *     tags: [Jobs]
- *     summary: 上傳音訊檔案並建立任務
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             required: [audio]
- *             properties:
- *               audio:
- *                 type: string
- *                 format: binary
- *     responses:
- *       202:
- *         description: 任務已建立
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data:
- *                   type: object
- *                   properties:
- *                     jobId: { type: string, format: uuid }
- *                     status: { type: string }
- *       400:
- *         description: 未上傳檔案或格式不支援
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-jobsRouter.post('/',
+jobsRouter.post(
+  '/',
   upload.single('audio'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -61,35 +31,15 @@ jobsRouter.post('/',
 
       await publishJob({ jobId: job.id });
 
-      res.status(202).json({ success: true, data: { jobId: job.id, status: job.status } });
+      res.status(202).json(
+        CreateJobResponseSchema.parse({ success: true, data: { jobId: job.id, status: job.status } }),
+      );
     } catch (err) {
       next(err);
     }
   },
 );
 
-/**
- * @swagger
- * /api/jobs:
- *   get:
- *     tags: [Jobs]
- *     summary: 列出所有任務
- *     parameters:
- *       - in: query
- *         name: page
- *         schema: { type: integer, default: 1 }
- *       - in: query
- *         name: limit
- *         schema: { type: integer, default: 20 }
- *       - in: query
- *         name: status
- *         schema:
- *           type: string
- *           enum: [PENDING, PROCESSING, COMPLETED, FAILED]
- *     responses:
- *       200:
- *         description: 任務列表
- */
 jobsRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const page = Math.max(1, parseInt(String(req.query.page ?? '1')));
@@ -109,37 +59,12 @@ jobsRouter.get('/', async (req: Request, res: Response, next: NextFunction) => {
       prisma.job.count({ where }),
     ]);
 
-    res.json({ success: true, data: { items, total, page, limit } });
+    res.json(ListJobsResponseSchema.parse({ success: true, data: { items, total, page, limit } }));
   } catch (err) {
     next(err);
   }
 });
 
-/**
- * @swagger
- * /api/jobs/{id}:
- *   get:
- *     tags: [Jobs]
- *     summary: 查詢單一任務詳情
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string, format: uuid }
- *     responses:
- *       200:
- *         description: 任務詳情
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean }
- *                 data:
- *                   $ref: '#/components/schemas/Job'
- *       404:
- *         description: 找不到任務
- */
 jobsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const job = await prisma.job.findUnique({ where: { id: req.params.id } });
@@ -147,34 +72,15 @@ jobsRouter.get('/:id', async (req: Request, res: Response, next: NextFunction) =
       res.status(404).json({ success: false, error: { code: 'JOB_NOT_FOUND', message: '找不到任務' } });
       return;
     }
-    res.json({ success: true, data: job });
+    res.json(GetJobResponseSchema.parse({ success: true, data: job }));
   } catch (err) {
     next(err);
   }
 });
 
-/**
- * @swagger
- * /api/jobs/{id}/events:
- *   get:
- *     tags: [Jobs]
- *     summary: SSE 即時任務狀態串流
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema: { type: string, format: uuid }
- *     responses:
- *       200:
- *         description: Server-Sent Events 串流
- *         content:
- *           text/event-stream:
- *             schema:
- *               type: string
- */
 jobsRouter.get('/:id/events', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    const id = req.params['id'] as string;
 
     const job = await prisma.job.findUnique({ where: { id } });
     if (!job) {
@@ -183,7 +89,7 @@ jobsRouter.get('/:id/events', async (req: Request, res: Response, next: NextFunc
     }
 
     if (job.status === 'COMPLETED' || job.status === 'FAILED') {
-      res.json({ success: true, data: job });
+      res.json(GetJobResponseSchema.parse({ success: true, data: job }));
       return;
     }
 
@@ -215,6 +121,50 @@ jobsRouter.get('/:id/events', async (req: Request, res: Response, next: NextFunc
       clearInterval(timer);
       unregister(id, res);
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+const AUDIO_CONTENT_TYPE: Record<string, string> = {
+  '.mp3': 'audio/mpeg',
+  '.wav': 'audio/wav',
+  '.ogg': 'audio/ogg',
+  '.m4a': 'audio/mp4',
+};
+
+jobsRouter.get('/:id/audio', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const job = await prisma.job.findUnique({ where: { id: req.params.id } });
+    if (!job) {
+      res.status(404).json({ success: false, error: { code: 'JOB_NOT_FOUND', message: '找不到任務' } });
+      return;
+    }
+    const ext = path.extname(job.storagePath).toLowerCase();
+    res.setHeader('Content-Type', AUDIO_CONTENT_TYPE[ext] ?? 'application/octet-stream');
+    storageProvider.download(job.storagePath).pipe(res);
+  } catch (err) {
+    next(err);
+  }
+});
+
+jobsRouter.post('/:id/retry', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const job = await prisma.job.findUnique({ where: { id: req.params.id } });
+    if (!job) {
+      res.status(404).json({ success: false, error: { code: 'JOB_NOT_FOUND', message: '找不到任務' } });
+      return;
+    }
+    if (job.status !== 'FAILED') {
+      res.status(400).json({ success: false, error: { code: 'INVALID_STATUS', message: '只有失敗的任務可以重試' } });
+      return;
+    }
+    await prisma.job.update({
+      where: { id: job.id },
+      data: { status: 'PENDING', errorMessage: null },
+    });
+    await publishJob({ jobId: job.id });
+    res.json(RetryJobResponseSchema.parse({ success: true, data: { jobId: job.id, status: 'PENDING' } }));
   } catch (err) {
     next(err);
   }

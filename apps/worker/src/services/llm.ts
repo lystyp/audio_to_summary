@@ -10,11 +10,12 @@ export async function summarize(transcript: string): Promise<string> {
       請將以下內容整理為重點摘要。
 
       規則：
-      - 條列式輸出（使用 -）
-      - 每點不超過20字
+      - 除了摘要本身以外，不要加入任何與摘要無關的文字
       - 僅保留關鍵資訊
       - 不要加入主觀解釋
-      - 保留原意' `,
+      - 保留原意' 
+      - 如果沒有摘要內容或是其他非預期情形則直接回傳"None"
+      要摘要的內容如下：`,
       transcript,
   ]);
   return result.response.text();

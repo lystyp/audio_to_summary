@@ -8,6 +8,7 @@ const ALLOWED_EXT = new Set(['.mp3', '.wav', '.ogg', '.m4a']);
 
 const gcsStorage: multer.StorageEngine = {
   _handleFile(_req, file, cb) {
+    file.originalname = Buffer.from(file.originalname, 'latin1').toString('utf8');
     const ext = path.extname(file.originalname).toLowerCase();
     const filename = `${crypto.randomUUID()}${ext}`;
 
