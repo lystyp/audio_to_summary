@@ -16,7 +16,9 @@
       "Bash(pnpm --filter @daniel/worker add fluent-ffmpeg)",
       "Bash(pnpm --filter @daniel/worker add -D @types/fluent-ffmpeg)",
       "Bash(pnpm --filter @daniel/server add fluent-ffmpeg)",
-      "Bash(pnpm --filter @daniel/server add -D @types/fluent-ffmpeg)"
+      "Bash(pnpm --filter @daniel/server add -D @types/fluent-ffmpeg)",
+      "Bash(grep -E \"\\\\.\\(json|yml|yaml|md\\)$|\\\\.env\")",
+      "Bash(grep -E \"\\\\.\\(sql|ts\\)$\")"
     ]
   }
 }
